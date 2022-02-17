@@ -3,6 +3,8 @@ package parser
 import (
 	"fmt"
 	"go/format"
+	"path"
+	"regexp"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -13,11 +15,19 @@ import (
 	"github.com/pingcap/parser/types"
 )
 
+var (
+	goFileRegex = regexp.MustCompile("([a-zA-Z0-9_]*\\.go)")
+)
+
 type DDLParser struct {
-	Table map[string]Columns
-	Index map[string]Indexes
-	err   error
-	p     *parser.Parser
+	Files       map[string]map[string]Columns // fileName -> TableName -> Columns
+	Index       map[string]Indexes
+	InputFile   string
+	OutputFile  string
+	IsDir       bool
+	packageName string
+	err         error
+	p           *parser.Parser
 }
 
 func (parser *DDLParser) Parse(sql string) error {
@@ -25,7 +35,7 @@ func (parser *DDLParser) Parse(sql string) error {
 	if err != nil {
 		return errors.Wrap(err, "sql parsing error")
 	}
-	parser.Table = make(map[string]Columns)
+	parser.Files = make(map[string]map[string]Columns)
 	parser.Index = make(map[string]Indexes)
 
 	for _, node := range nodes {
@@ -38,13 +48,19 @@ func (parser *DDLParser) Parse(sql string) error {
 	return nil
 }
 
-func (parser DDLParser) ToStructs(withTag bool) ([]byte, error) {
+func (parser DDLParser) ToStructs(withTag bool) (fileContentMap map[string][]byte, err error) {
+	fileContentMap = make(map[string][]byte)
 	var builder strings.Builder
-	for tableName, columns := range parser.Table {
-		builder.WriteString(fmt.Sprintf("type %s struct { %s }\n\n", strcase.ToCamel(tableName), columns.ToStructFields(withTag)))
+	for fileName, tables := range parser.Files {
+		for tableName, columns := range tables {
+			builder.WriteString(fmt.Sprintf("type %s struct { %s }\n\n", strcase.ToCamel(tableName), columns.ToStructFields(withTag)))
+		}
+		fileContentMap[fileName], err = format.Source([]byte(builder.String()))
+		if err != nil {
+			return
+		}
 	}
-	s := builder.String()
-	return format.Source([]byte(s))
+	return
 }
 
 func (parser *DDLParser) Enter(n ast.Node) (node ast.Node, skipChildren bool) {
@@ -62,12 +78,39 @@ func (parser *DDLParser) Leave(n ast.Node) (node ast.Node, ok bool) {
 }
 
 func (parser *DDLParser) parseCreateTableStmt(stmt *ast.CreateTableStmt) error {
+	fileName := ""
 	tableName := stmt.Table.Name.String()
-	if _, ok := parser.Table[tableName]; ok {
+	if !parser.IsDir {
+		fileName = parser.OutputFile
+	} else {
+		for _, option := range stmt.Options {
+			if option.Tp == ast.TableOptionComment {
+				fileName = goFileRegex.FindString(option.StrValue)
+				break
+			}
+		}
+		if fileName == "" {
+			fileName = path.Base(parser.InputFile)
+			fileSuffix := path.Ext(parser.InputFile)
+			filePrefix := fileName[0 : len(fileName)-len(fileSuffix)]
+			if fileName != "" {
+				fileName = path.Join(parser.OutputFile, filePrefix+".go")
+			} else {
+				fileName = path.Join(parser.OutputFile, "tables.go")
+			}
+		} else {
+			fileName = path.Join(parser.OutputFile, fileName)
+		}
+	}
+	if _, ok := parser.Files[fileName]; !ok {
+		parser.Files[fileName] = make(map[string]Columns)
+	}
+
+	if _, ok := parser.Files[fileName][tableName]; ok {
 		return errors.Errorf("duplicate table name :%s", tableName)
 	} else {
 		for _, col := range stmt.Cols {
-			parser.Table[tableName] = append(parser.Table[tableName], Column{
+			parser.Files[fileName][tableName] = append(parser.Files[fileName][tableName], Column{
 				Name: col.Name.Name.String(),
 				Type: parser.getColumnType(col.Tp.EvalType()),
 			})
@@ -95,9 +138,13 @@ func (parser *DDLParser) getColumnType(typ types.EvalType) string {
 	}
 }
 
-func New() *DDLParser {
+func New(input string, output string, isDir bool, packageName string) *DDLParser {
 	return &DDLParser{
-		p: parser.New(),
+		p:           parser.New(),
+		InputFile:   input,
+		OutputFile:  output,
+		IsDir:       isDir,
+		packageName: packageName,
 	}
 }
 
