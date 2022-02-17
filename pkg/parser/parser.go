@@ -14,10 +14,10 @@ import (
 )
 
 type DDLParser struct {
-	TableName string
-	Columns   Columns
-	err       error
-	p         *parser.Parser
+	Table map[string]Columns
+	Index map[string]Indexes
+	err   error
+	p     *parser.Parser
 }
 
 func (parser *DDLParser) Parse(sql string) error {
@@ -25,6 +25,8 @@ func (parser *DDLParser) Parse(sql string) error {
 	if err != nil {
 		return errors.Wrap(err, "sql parsing error")
 	}
+	parser.Table = make(map[string]Columns)
+	parser.Index = make(map[string]Indexes)
 
 	for _, node := range nodes {
 		node.Accept(parser)
@@ -36,8 +38,12 @@ func (parser *DDLParser) Parse(sql string) error {
 	return nil
 }
 
-func (parser DDLParser) ToStruct(withTag bool) ([]byte, error) {
-	s := fmt.Sprintf("type %s struct { %s }", strcase.ToCamel(parser.TableName), parser.Columns.ToStructFields(withTag))
+func (parser DDLParser) ToStructs(withTag bool) ([]byte, error) {
+	var builder strings.Builder
+	for tableName, columns := range parser.Table {
+		builder.WriteString(fmt.Sprintf("type %s struct { %s }\n\n", strcase.ToCamel(tableName), columns.ToStructFields(withTag)))
+	}
+	s := builder.String()
 	return format.Source([]byte(s))
 }
 
@@ -45,6 +51,8 @@ func (parser *DDLParser) Enter(n ast.Node) (node ast.Node, skipChildren bool) {
 	switch n := n.(type) {
 	case *ast.CreateTableStmt:
 		parser.err = parser.parseCreateTableStmt(n)
+	case *ast.CreateIndexStmt:
+		parser.err = parser.parseCreateIndexStmt(n)
 	}
 	return n, true
 }
@@ -54,14 +62,21 @@ func (parser *DDLParser) Leave(n ast.Node) (node ast.Node, ok bool) {
 }
 
 func (parser *DDLParser) parseCreateTableStmt(stmt *ast.CreateTableStmt) error {
-	parser.TableName = stmt.Table.Name.String()
-	for _, col := range stmt.Cols {
-		parser.Columns = append(parser.Columns, Column{
-			Name: col.Name.Name.String(),
-			Type: parser.getColumnType(col.Tp.EvalType()),
-		})
+	tableName := stmt.Table.Name.String()
+	if _, ok := parser.Table[tableName]; ok {
+		return errors.Errorf("duplicate table name :%s", tableName)
+	} else {
+		for _, col := range stmt.Cols {
+			parser.Table[tableName] = append(parser.Table[tableName], Column{
+				Name: col.Name.Name.String(),
+				Type: parser.getColumnType(col.Tp.EvalType()),
+			})
+		}
 	}
+	return nil
+}
 
+func (parser *DDLParser) parseCreateIndexStmt(stmt *ast.CreateIndexStmt) error {
 	return nil
 }
 
@@ -73,6 +88,8 @@ func (parser *DDLParser) getColumnType(typ types.EvalType) string {
 		return "float64"
 	case types.ETDatetime, types.ETTimestamp:
 		return "time.Time"
+	case types.ETString:
+		return "string"
 	default:
 		return "string"
 	}
@@ -102,7 +119,12 @@ type Column struct {
 func (column Column) ToStructField(withTag bool) string {
 	var tag string
 	if withTag {
-		tag = fmt.Sprintf("`json:\"%s\" gorm:\"Column:%s\"`", strcase.ToSnake(column.Name), column.Name)
+		tag = fmt.Sprintf("`json:\"%s\" gorm:\"column:%s\"`", strcase.ToSnake(column.Name), column.Name)
 	}
 	return fmt.Sprintf("%s %s", strcase.ToCamel(column.Name), column.Type) + tag
+}
+
+type Indexes []Index
+
+type Index struct {
 }

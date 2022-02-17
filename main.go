@@ -15,8 +15,8 @@ limitations under the License.
 */
 package main
 
-import "github.com/realsangil/ddl2struct/cmd"
+import "github.com/Sterrenhemel/ddl2struct/cmd"
 
 func main() {
-  cmd.Execute()
+	cmd.Execute()
 }

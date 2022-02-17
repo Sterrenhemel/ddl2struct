@@ -1,7 +1,15 @@
 CREATE TABLE ddl2struct (
-    PersonID int,
-    LastName varchar(255),
-    FirstName varchar(255),
-    Address varchar(255),
-    City varchar(255)
+    person_id int,
+    last_name varchar(255),
+    first_name varchar(255),
+    address varchar(255),
+    city varchar(255)
+);
+
+CREATE TABLE ddl2struct2 (
+    person_id bigint,
+    last_name varchar(255),
+    first_name varchar(255),
+    address varchar(255),
+    city varchar(255)
 );
