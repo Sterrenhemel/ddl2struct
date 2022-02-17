@@ -20,7 +20,8 @@ var (
 )
 
 type DDLParser struct {
-	Files       map[string]map[string]Columns // fileName -> TableName -> Columns
+	FileTables  map[string]map[string]Columns // fileName -> TableName -> Columns
+	FileImports map[string]map[string]string  // fileName -> alias -> importName
 	Index       map[string]Indexes
 	InputFile   string
 	OutputFile  string
@@ -35,7 +36,8 @@ func (parser *DDLParser) Parse(sql string) error {
 	if err != nil {
 		return errors.Wrap(err, "sql parsing error")
 	}
-	parser.Files = make(map[string]map[string]Columns)
+	parser.FileTables = make(map[string]map[string]Columns)
+	parser.FileImports = make(map[string]map[string]string)
 	parser.Index = make(map[string]Indexes)
 
 	for _, node := range nodes {
@@ -51,7 +53,7 @@ func (parser *DDLParser) Parse(sql string) error {
 func (parser DDLParser) ToStructs(withTag bool) (fileContentMap map[string][]byte, err error) {
 	fileContentMap = make(map[string][]byte)
 	var builder strings.Builder
-	for fileName, tables := range parser.Files {
+	for fileName, tables := range parser.FileTables {
 		for tableName, columns := range tables {
 			builder.WriteString(fmt.Sprintf("type %s struct { %s }\n\n", strcase.ToCamel(tableName), columns.ToStructFields(withTag)))
 		}
@@ -102,21 +104,33 @@ func (parser *DDLParser) parseCreateTableStmt(stmt *ast.CreateTableStmt) error {
 			fileName = path.Join(parser.OutputFile, fileName)
 		}
 	}
-	if _, ok := parser.Files[fileName]; !ok {
-		parser.Files[fileName] = make(map[string]Columns)
+	if parser.FileImports[fileName] == nil {
+		parser.FileImports[fileName] = make(map[string]string)
+	}
+	if parser.FileTables[fileName] == nil {
+		parser.FileTables[fileName] = make(map[string]Columns)
 	}
 
-	if _, ok := parser.Files[fileName][tableName]; ok {
+	if _, ok := parser.FileTables[fileName][tableName]; ok {
 		return errors.Errorf("duplicate table name :%s", tableName)
 	} else {
 		for _, col := range stmt.Cols {
-			parser.Files[fileName][tableName] = append(parser.Files[fileName][tableName], Column{
+			tableColumn := Column{
 				Name: col.Name.Name.String(),
 				Type: parser.getColumnType(col.Tp.EvalType()),
-			})
+			}
+			parser.addImport(fileName, tableColumn)
+			parser.FileTables[fileName][tableName] = append(parser.FileTables[fileName][tableName], tableColumn)
 		}
 	}
 	return nil
+}
+
+func (parser *DDLParser) addImport(fileName string, column Column) {
+	switch column.Type {
+	case "time.Time":
+		parser.FileImports[fileName]["time"] = "time"
+	}
 }
 
 func (parser *DDLParser) parseCreateIndexStmt(stmt *ast.CreateIndexStmt) error {
