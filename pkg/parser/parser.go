@@ -61,6 +61,7 @@ func (parser DDLParser) ToStructs(withTag bool) (fileContentMap map[string][]byt
 		if err != nil {
 			return
 		}
+		builder.Reset()
 	}
 	return
 }
