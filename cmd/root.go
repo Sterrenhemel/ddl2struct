@@ -67,12 +67,12 @@ func runCommand(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	structFiles, err := parser.ToStructs(true)
-	if err != nil {
-		panic(err)
-	}
+	//structFiles, err := parser.ToStructs(true)
+	//if err != nil {
+	//	panic(err)
+	//}
 
-	for fileName, fileBytes := range structFiles {
+	for fileName, _ := range parser.FileTables {
 		t := template.Must(template.New(fileName).Funcs(map[string]interface{}{
 			"mapExists": mapExists,
 			"ToCamel":   strcase.ToCamel,
@@ -85,7 +85,7 @@ func runCommand(cmd *cobra.Command, args []string) {
 			Imports:     parser.FileImports[fileName],
 			Structs:     parser.FileTables[fileName],
 			WithTag:     true,
-			FileContent: string(fileBytes),
+			//FileContent: string(fileBytes),
 		})
 		if err != nil {
 			panic(err)
@@ -108,7 +108,7 @@ type TemplateVar struct {
 	InputFile   string
 	PackageName string
 	Imports     map[string]string
-	Structs     map[string]parser.Columns
+	Structs     map[string]*parser.Table
 	WithTag     bool
 	TagString   string
 	FileContent string

@@ -17,10 +17,11 @@ import (
 {{- end }}
 
 
-{{- range $tableName, $columns := .Structs}}
+{{- range $tableName, $table := .Structs}}
+{{ if $table.TableComment }} // {{ $table.TableComment }} {{- end}}
 type {{ ToCamel $tableName }} struct{
-	{{- range $idx, $column := $columns}}
-	{{ ToCamel $column.Name }} {{ $column.Type }}  ` + "`json:\"{{ ToSnake $column.Name }}\" gorm:\"column:{{ $column.Name }}\"`" + `
+	{{- range $idx, $column := $table.Columns}}
+	{{ ToCamel $column.Name }} {{ $column.Type }}  ` + "`json:\"{{ ToSnake $column.Name }}\" gorm:\"column:{{ $column.Name }}\"`" + `{{ if $column.Comment }}// {{ $column.Comment }}  {{- end}}
 	{{- end}}
 }
 
