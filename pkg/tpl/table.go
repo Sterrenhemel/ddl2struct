@@ -16,5 +16,16 @@ import (
 )
 {{- end }}
 
-{{ .FileContent }}
+
+{{- range $tableName, $columns := .Structs}}
+type {{ ToCamel $tableName }} struct{
+	{{- range $idx, $column := $columns}}
+	{{ ToCamel $column.Name }} {{ $column.Type }}  ` + "`json:\"{{ ToSnake $column.Name }}\" gorm:\"column:{{ $column.Name }}\"`" + `
+	{{- end}}
+}
+
+func ({{ ToCamel $tableName }}) TableName() string {
+	return "{{ $tableName }}"
+}
+{{- end}}
 `

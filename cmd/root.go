@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/Sterrenhemel/ddl2struct/pkg/tpl"
+	"github.com/iancoleman/strcase"
+	"go/format"
 	"io/ioutil"
 	"os"
 	"text/template"
@@ -73,25 +75,32 @@ func runCommand(cmd *cobra.Command, args []string) {
 	for fileName, fileBytes := range structFiles {
 		t := template.Must(template.New(fileName).Funcs(map[string]interface{}{
 			"mapExists": mapExists,
+			"ToCamel":   strcase.ToCamel,
+			"ToSnake":   strcase.ToSnake,
 		}).Parse(tpl.TableTemplate))
 		buf := &bytes.Buffer{}
 		err := t.Execute(buf, TemplateVar{
 			InputFile:   inputPath,
 			PackageName: packageName,
 			Imports:     parser.FileImports[fileName],
+			Structs:     parser.FileTables[fileName],
+			WithTag:     true,
 			FileContent: string(fileBytes),
 		})
 		if err != nil {
 			panic(err)
 		}
 		content := buf.Bytes()
-
+		source, err := format.Source(content)
+		if err != nil {
+			return
+		}
 		if fileName != "" {
-			if err := ioutil.WriteFile(fileName, content, 0644); err != nil {
+			if err := ioutil.WriteFile(fileName, source, 0644); err != nil {
 				panic(err)
 			}
 		}
-		fmt.Printf("%s", content)
+		fmt.Printf("%s", source)
 	}
 }
 
@@ -99,6 +108,9 @@ type TemplateVar struct {
 	InputFile   string
 	PackageName string
 	Imports     map[string]string
+	Structs     map[string]parser.Columns
+	WithTag     bool
+	TagString   string
 	FileContent string
 }
 
