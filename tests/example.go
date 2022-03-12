@@ -2,8 +2,31 @@
 // InputFile: tests/example.sql
 package tests
 
+// 北极星权限角色表
+type AdminRole struct {
+	Id          int64  `json:"id" gorm:"column:id"`                   // "唯一id"
+	RoleKey     string `json:"role_key" gorm:"column:role_key"`       // "角色key"
+	Description string `json:"description" gorm:"column:description"` // "角色描述"
+	Status      int8   `json:"status" gorm:"column:status"`           // "角色状态"
+	Name        string `json:"name" gorm:"column:name"`               // "角色名称"
+}
+
+func (AdminRole) TableName() string {
+	return "admin_role"
+}
+
+// 北极星角色权限关联表
+type AdminRolePermissionRelation struct {
+	RoleId       int64 `json:"role_id" gorm:"column:role_id"`             // "角色id"
+	PermissionId int64 `json:"permission_id" gorm:"column:permission_id"` // "权限id"
+}
+
+func (AdminRolePermissionRelation) TableName() string {
+	return "admin_role_permission_relation"
+}
+
 type Ddl2Struct2 struct {
-	PersonId  int    `json:"person_id" gorm:"column:person_id"`
+	PersonId  int64  `json:"person_id" gorm:"column:person_id"`
 	LastName  string `json:"last_name" gorm:"column:last_name"`
 	FirstName string `json:"first_name" gorm:"column:first_name"`
 	Address   string `json:"address" gorm:"column:address"`

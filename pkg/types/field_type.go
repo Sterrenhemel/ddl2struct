@@ -19,6 +19,7 @@ import (
 	"github.com/pingcap/parser/charset"
 	"github.com/pingcap/parser/mysql"
 	ast "github.com/pingcap/parser/types"
+
 	"github.com/Sterrenhemel/ddl2struct/pkg/types/json"
 	utilMath "github.com/Sterrenhemel/ddl2struct/pkg/util/math"
 )

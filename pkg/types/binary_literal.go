@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
+
 	"github.com/Sterrenhemel/ddl2struct/pkg/stmtctx"
 )
 

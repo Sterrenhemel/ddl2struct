@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/pingcap/parser/terror"
+
 	mysql "github.com/Sterrenhemel/ddl2struct/pkg/errno"
 )
 

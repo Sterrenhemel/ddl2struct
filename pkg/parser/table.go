@@ -17,9 +17,10 @@ type Columns []Column
 //}
 
 type Column struct {
-	Name    string
-	Type    string
-	Comment string // 注释
+	Name       string
+	Type       string
+	Comment    string // 注释
+	DefaultVal string
 }
 
 //func (column Column) ToStructField(withTag bool) string {

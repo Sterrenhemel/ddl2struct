@@ -22,6 +22,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/pingcap/errors"
+
 	"github.com/Sterrenhemel/ddl2struct/pkg/util/hack"
 	"github.com/Sterrenhemel/ddl2struct/pkg/util/stringutil"
 )

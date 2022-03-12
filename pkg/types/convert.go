@@ -24,6 +24,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/parser/mysql"
+
 	"github.com/Sterrenhemel/ddl2struct/pkg/stmtctx"
 	"github.com/Sterrenhemel/ddl2struct/pkg/types/json"
 	"github.com/Sterrenhemel/ddl2struct/pkg/util/hack"

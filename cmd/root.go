@@ -3,15 +3,18 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"github.com/Sterrenhemel/ddl2struct/pkg/tpl"
-	"github.com/iancoleman/strcase"
 	"go/format"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"text/template"
+
+	"github.com/iancoleman/strcase"
 
 	"github.com/Sterrenhemel/ddl2struct/pkg/parser"
 	_ "github.com/Sterrenhemel/ddl2struct/pkg/parser_driver"
+	"github.com/Sterrenhemel/ddl2struct/pkg/tpl"
+	"github.com/Sterrenhemel/ddl2struct/pkg/util/logutil"
 
 	"github.com/spf13/cobra"
 )
@@ -32,7 +35,7 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		logutil.BgSLogger().Fatal(err)
 		os.Exit(1)
 	}
 }
@@ -45,34 +48,41 @@ func init() {
 }
 
 func runCommand(cmd *cobra.Command, args []string) {
-	sql, err := ioutil.ReadFile(inputPath)
+	s, err := os.Stat(inputPath)
 	if err != nil {
-		panic(err)
-	}
-
-	var isDir bool
-	s, err := os.Stat(outputPath)
-	if err != nil {
-		isDir = false
+		logutil.BgSLogger().Fatal(err)
 	} else {
 		if s.IsDir() {
-			isDir = true
-		} else {
-			isDir = false
+			files, err := ioutil.ReadDir(inputPath)
+			if err != nil {
+				logutil.BgSLogger().Fatal(err)
+			}
+			for _, file := range files {
+				if filepath.Ext(file.Name()) == ".sql" {
+					name := filepath.Join(inputPath, file.Name())
+					parseFile(name)
+				}
+			}
 		}
 	}
+}
 
-	parser := parser.New(inputPath, outputPath, isDir, packageName)
-	if err := parser.Parse(string(sql)); err != nil {
+func parseFile(filepath string) {
+	sql, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		panic(err)
+	}
+	ddlParser := parser.New(filepath, outputPath, packageName)
+	if err := ddlParser.Parse(string(sql)); err != nil {
 		panic(err)
 	}
 
-	//structFiles, err := parser.ToStructs(true)
+	//structFiles, err := ddlParser.ToStructs(true)
 	//if err != nil {
 	//	panic(err)
 	//}
 
-	for fileName, _ := range parser.FileTables {
+	for fileName := range ddlParser.FileTables {
 		t := template.Must(template.New(fileName).Funcs(map[string]interface{}{
 			"mapExists": mapExists,
 			"ToCamel":   strcase.ToCamel,
@@ -80,10 +90,10 @@ func runCommand(cmd *cobra.Command, args []string) {
 		}).Parse(tpl.TableTemplate))
 		buf := &bytes.Buffer{}
 		err := t.Execute(buf, TemplateVar{
-			InputFile:   inputPath,
+			InputFile:   filepath,
 			PackageName: packageName,
-			Imports:     parser.FileImports[fileName],
-			Structs:     parser.FileTables[fileName],
+			Imports:     ddlParser.FileImports[fileName],
+			Structs:     ddlParser.FileTables[fileName],
 			WithTag:     true,
 			//FileContent: string(fileBytes),
 		})

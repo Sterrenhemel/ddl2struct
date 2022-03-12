@@ -17,6 +17,7 @@ import (
 	"strconv"
 
 	"github.com/pingcap/errors"
+
 	"github.com/Sterrenhemel/ddl2struct/pkg/util/collate"
 	"github.com/Sterrenhemel/ddl2struct/pkg/util/stringutil"
 )

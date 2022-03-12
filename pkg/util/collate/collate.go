@@ -21,8 +21,9 @@ import (
 	"github.com/pingcap/parser/charset"
 	"github.com/pingcap/parser/mysql"
 	"github.com/pingcap/parser/terror"
-	"github.com/Sterrenhemel/ddl2struct/pkg/util/logutil"
 	"go.uber.org/zap"
+
+	"github.com/Sterrenhemel/ddl2struct/pkg/util/logutil"
 )
 
 var (

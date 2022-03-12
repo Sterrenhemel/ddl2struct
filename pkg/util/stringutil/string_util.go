@@ -21,6 +21,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/parser/mysql"
+
 	"github.com/Sterrenhemel/ddl2struct/pkg/util/hack"
 )
 

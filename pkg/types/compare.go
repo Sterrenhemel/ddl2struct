@@ -14,9 +14,10 @@
 package types
 
 import (
-	"github.com/Sterrenhemel/ddl2struct/pkg/util/collate"
 	"math"
 	"time"
+
+	"github.com/Sterrenhemel/ddl2struct/pkg/util/collate"
 )
 
 // CompareInt64 returns an integer comparing the int64 x to y.

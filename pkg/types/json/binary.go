@@ -27,6 +27,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/parser/terror"
+
 	"github.com/Sterrenhemel/ddl2struct/pkg/util/hack"
 )
 

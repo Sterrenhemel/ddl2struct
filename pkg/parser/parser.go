@@ -2,12 +2,15 @@ package parser
 
 import (
 	"bytes"
+	"os"
+	"path"
+	"regexp"
+
 	"github.com/pingcap/errors"
 	"github.com/pingcap/parser"
 	"github.com/pingcap/parser/ast"
+	"github.com/pingcap/parser/mysql"
 	"github.com/pingcap/parser/types"
-	"path"
-	"regexp"
 )
 
 var (
@@ -76,33 +79,8 @@ func (parser *DDLParser) Leave(n ast.Node) (node ast.Node, ok bool) {
 }
 
 func (parser *DDLParser) parseCreateTableStmt(stmt *ast.CreateTableStmt) error {
-	fileName := ""
+	fileName, tableComment := parser.parseOutput(stmt)
 	tableName := stmt.Table.Name.String()
-	tableComment := ""
-	if !parser.IsDir {
-		fileName = parser.OutputFile
-	} else {
-		for _, option := range stmt.Options {
-			if option.Tp == ast.TableOptionComment {
-				fileName = goFileRegex.FindString(option.StrValue)
-				//strings.ReplaceAll(option.StrValue, "*.go", "")
-				tableComment = option.StrValue
-				break
-			}
-		}
-		if fileName == "" {
-			fileName = path.Base(parser.InputFile)
-			fileSuffix := path.Ext(parser.InputFile)
-			filePrefix := fileName[0 : len(fileName)-len(fileSuffix)]
-			if fileName != "" {
-				fileName = path.Join(parser.OutputFile, filePrefix+".go")
-			} else {
-				fileName = path.Join(parser.OutputFile, "tables.go")
-			}
-		} else {
-			fileName = path.Join(parser.OutputFile, fileName)
-		}
-	}
 	if parser.FileImports[fileName] == nil {
 		parser.FileImports[fileName] = make(map[string]string)
 	}
@@ -138,7 +116,7 @@ func (parser *DDLParser) parseCreateTableStmt(stmt *ast.CreateTableStmt) error {
 			}
 			tableColumn := Column{
 				Name:    col.Name.Name.String(),
-				Type:    parser.getColumnType(col.Tp.EvalType()),
+				Type:    parser.getColumnType(col.Tp),
 				Comment: colComment,
 			}
 			parser.addImport(fileName, tableColumn)
@@ -146,6 +124,39 @@ func (parser *DDLParser) parseCreateTableStmt(stmt *ast.CreateTableStmt) error {
 		}
 	}
 	return nil
+}
+
+func (parser *DDLParser) parseOutput(stmt *ast.CreateTableStmt) (fileName string, tableComment string) {
+	s, err := os.Stat(parser.OutputFile)
+	if err != nil {
+		fileName = parser.OutputFile
+	} else {
+		if s.IsDir() {
+			for _, option := range stmt.Options {
+				if option.Tp == ast.TableOptionComment {
+					fileName = goFileRegex.FindString(option.StrValue)
+					//strings.ReplaceAll(option.StrValue, "*.go", "")
+					tableComment = option.StrValue
+					break
+				}
+			}
+			if fileName == "" {
+				fileName = path.Base(parser.InputFile)
+				fileSuffix := path.Ext(parser.InputFile)
+				filePrefix := fileName[0 : len(fileName)-len(fileSuffix)]
+				if fileName != "" {
+					fileName = path.Join(parser.OutputFile, filePrefix+".go")
+				} else {
+					fileName = path.Join(parser.OutputFile, "tables.go")
+				}
+			} else {
+				fileName = path.Join(parser.OutputFile, fileName)
+			}
+		} else {
+			fileName = parser.OutputFile
+		}
+	}
+	return
 }
 
 func (parser *DDLParser) addImport(fileName string, column Column) {
@@ -159,27 +170,33 @@ func (parser *DDLParser) parseCreateIndexStmt(stmt *ast.CreateIndexStmt) error {
 	return nil
 }
 
-func (parser *DDLParser) getColumnType(typ types.EvalType) string {
-	switch typ {
-	case types.ETInt:
+func (parser *DDLParser) getColumnType(fieldType *types.FieldType) string {
+	fieldType.EvalType()
+	switch fieldType.Tp {
+	case mysql.TypeTiny:
+		return "int8"
+	case mysql.TypeShort, mysql.TypeInt24, mysql.TypeYear:
 		return "int"
-	case types.ETReal, types.ETDecimal:
+	case mysql.TypeLong, mysql.TypeLonglong, mysql.TypeBit:
+		return "int64"
+	case mysql.TypeFloat:
+		return "float32"
+	case mysql.TypeDouble, mysql.TypeNewDecimal:
 		return "float64"
-	case types.ETDatetime, types.ETTimestamp:
+	case mysql.TypeDate, mysql.TypeDatetime:
 		return "time.Time"
-	case types.ETString:
-		return "string"
+	case mysql.TypeTimestamp:
+		return "time.Time"
 	default:
 		return "string"
 	}
 }
 
-func New(input string, output string, isDir bool, packageName string) *DDLParser {
+func New(input string, output string, packageName string) *DDLParser {
 	return &DDLParser{
 		p:           parser.New(),
 		InputFile:   input,
 		OutputFile:  output,
-		IsDir:       isDir,
 		packageName: packageName,
 	}
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/parser/mysql"
 	"github.com/pingcap/parser/terror"
+
 	"github.com/Sterrenhemel/ddl2struct/pkg/stmtctx"
 	"github.com/Sterrenhemel/ddl2struct/pkg/util/logutil"
 	tidbMath "github.com/Sterrenhemel/ddl2struct/pkg/util/math"

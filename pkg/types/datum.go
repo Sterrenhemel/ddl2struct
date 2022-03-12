@@ -28,11 +28,12 @@ import (
 	"github.com/pingcap/parser/mysql"
 	"github.com/pingcap/parser/terror"
 	"github.com/pingcap/parser/types"
+	"go.uber.org/zap"
+
 	"github.com/Sterrenhemel/ddl2struct/pkg/stmtctx"
 	"github.com/Sterrenhemel/ddl2struct/pkg/types/json"
 	"github.com/Sterrenhemel/ddl2struct/pkg/util/hack"
 	"github.com/Sterrenhemel/ddl2struct/pkg/util/logutil"
-	"go.uber.org/zap"
 )
 
 // Kind constants.

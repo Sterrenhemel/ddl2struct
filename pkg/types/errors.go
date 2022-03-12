@@ -16,6 +16,7 @@ package types
 import (
 	"github.com/pingcap/parser/terror"
 	parser_types "github.com/pingcap/parser/types"
+
 	mysql "github.com/Sterrenhemel/ddl2struct/pkg/errno"
 )
 

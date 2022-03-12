@@ -4,7 +4,9 @@ package tests
 
 //  aaa.go
 type Ddl2Struct struct {
-	PersonId  int    `json:"person_id" gorm:"column:person_id"`   // "ID"
+	PersonId  int64  `json:"person_id" gorm:"column:person_id"`   // "ID"
+	It        int64  `json:"it" gorm:"column:it"`                 // "id"
+	Tit       int8   `json:"tit" gorm:"column:tit"`               // "tinyint"
 	LastName  string `json:"last_name" gorm:"column:last_name"`   // "last Name"
 	FirstName string `json:"first_name" gorm:"column:first_name"` // "first Name"
 	Address   string `json:"address" gorm:"column:address"`       // "address"

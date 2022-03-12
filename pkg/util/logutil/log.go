@@ -22,3 +22,7 @@ import (
 func BgLogger() *zap.Logger {
 	return zaplog.L()
 }
+
+func BgSLogger() *zap.SugaredLogger {
+	return zaplog.S()
+}

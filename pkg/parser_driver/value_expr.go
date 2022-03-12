@@ -22,6 +22,7 @@ import (
 	"github.com/pingcap/parser/ast"
 	"github.com/pingcap/parser/format"
 	"github.com/pingcap/parser/mysql"
+
 	"github.com/Sterrenhemel/ddl2struct/pkg/types"
 	"github.com/Sterrenhemel/ddl2struct/pkg/util/hack"
 )
